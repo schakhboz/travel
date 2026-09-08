@@ -88,3 +88,20 @@ telegram:
     #    inson_dev: 950023045
     tech_support: -4829715284
   username: "@tech_error_inson_test_bot"
+
+# Модуль выпуска Centrum Air (ТЗ п. 11: настройки меняются без релиза)
+centrum-air:
+  product-id: 352
+  default-division-id: 90000
+  eur-rate: 13500
+  ersp:
+    catalog: ERSP_VOLUNTARY_INTEGRATIONS
+    issue-function: CONTRACT_TEST          # продуктив: CONTRACT
+    confirm-function: CONFIRM_PAYED_TEST   # продуктив: CONFIRM_PAYED
+    termination-function: POLICY_TERMINATION
+  idempotency:
+    in-progress-timeout: 5m
+  validation:
+    strict-product-rules: true
+    check-premium: false
+    premium-tolerance: 0.01
