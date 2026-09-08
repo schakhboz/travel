@@ -18,6 +18,10 @@ final class PolicyRequests {
     }
 
     static PolicyIssueRequest issueRequest(String pnr, List<ProductDto> products) {
+        return issueRequest(pnr, products, "tx-1");
+    }
+
+    static PolicyIssueRequest issueRequest(String pnr, List<ProductDto> products, String transactionId) {
         return new PolicyIssueRequest(
                 pnr,
                 PAYMENT,
@@ -27,10 +31,9 @@ final class PolicyRequests {
                 route(),
                 "RU",
                 products,
-                List.of(new TransactionDto(1, "tx-1")),
+                List.of(new TransactionDto(1, transactionId)),
                 insurant(),
-                List.of(passenger()),
-                null
+                List.of(passenger())
         );
     }
 

@@ -10,6 +10,7 @@ import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 import uz.insonline.travel.CentrumAir.config.CentrumAirProperties;
 import uz.insonline.travel.CentrumAir.domain.ProductSelection;
+import uz.insonline.travel.CentrumAir.dto.TransactionDto;
 import uz.insonline.travel.CentrumAir.dto.request.PolicyIssueRequest;
 import uz.insonline.travel.CentrumAir.dto.response.PolicyIssueResponse;
 import uz.insonline.travel.CentrumAir.error.CentrumAirApiException;
@@ -29,11 +30,13 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.stream.Collectors;
 
 /**
  * Идемпотентность выпуска (ТЗ п. 7.3):
  * <ul>
- *   <li>ключ — заголовок {@code Idempotency-Key}, а если его нет — PNR + набор продуктов + номер попытки оплаты;</li>
+ *   <li>ключ — заголовок {@code Idempotency-Key}, а если его нет — PNR, набор продуктов и идентификаторы
+ *       платёжных транзакций а/к (при их отсутствии — дата и время оплаты);</li>
  *   <li>повтор с тем же ключом не создаёт дублей: возвращается результат первичного выпуска;</li>
  *   <li>после частичного отказа повтор довыпускает только недостающие полисы;</li>
  *   <li>активная заявка на ту же бронь и продукты без явного ключа — ошибка {@code duplicate} (ТЗ п. 7.6.5).</li>
@@ -176,7 +179,23 @@ public class IdempotencyService {
             }
             return key;
         }
-        return hash(String.join("|", request.pnr(), fingerprint, String.valueOf(request.paymentAttemptOrFirst())));
+        return hash(String.join("|", request.pnr(), fingerprint, paymentReference(request)));
+    }
+
+    /**
+     * Отпечаток попытки оплаты. Идентификаторы транзакций а/к уникальны для платежа: повтор того же
+     * запроса даёт тот же ключ, новая оплата той же брони — новый. Если транзакции не переданы,
+     * роль отпечатка играет дата и время оплаты.
+     */
+    private static String paymentReference(PolicyIssueRequest request) {
+        if (request.transactions() == null || request.transactions().isEmpty()) {
+            return String.valueOf(request.paymentTime());
+        }
+        return request.transactions().stream()
+                .map(TransactionDto::transactionId)
+                .filter(id -> id != null && !id.isBlank())
+                .sorted()
+                .collect(Collectors.joining(","));
     }
 
     private String serialize(Object value) {

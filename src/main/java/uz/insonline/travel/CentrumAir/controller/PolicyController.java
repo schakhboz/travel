@@ -34,7 +34,8 @@ public class PolicyController {
             description = "Creates one or more policies for a booking. The request is idempotent: repeating it with "
                     + "the same Idempotency-Key returns the result of the first issue and never creates duplicates. "
                     + "After a partial failure a repeat issues only the missing policies. When the header is omitted, "
-                    + "the key is derived from PNR + products + paymentAttempt.")
+                    + "the key is derived from PNR, the product list and the payment transaction ids "
+                    + "(paymentTime when no transactions are sent).")
     @ApiResponses(value = {
             @ApiResponse(responseCode = "200", description = "Policies issued successfully",
                     content = @Content(schema = @Schema(implementation = PolicyIssueResponse.class))),

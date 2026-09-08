@@ -147,7 +147,7 @@ class IdempotencyServiceTest {
     }
 
     @Test
-    void derivedKeyChangesWithPaymentAttempt() {
+    void derivedKeyChangesWithPaymentTransaction() {
         when(idempotencyRepository.findByIdempotencyKey(anyString())).thenReturn(Optional.empty());
         when(idempotencyRepository.saveAndFlush(any())).thenAnswer(invocation -> invocation.getArgument(0));
 
@@ -157,9 +157,26 @@ class IdempotencyServiceTest {
         clearInvocations(idempotencyRepository);
         when(idempotencyRepository.findByIdempotencyKey(anyString())).thenReturn(Optional.empty());
         when(idempotencyRepository.saveAndFlush(any())).thenAnswer(invocation -> invocation.getArgument(0));
-        service.begin(retry(request), null);
+        service.begin(PolicyRequests.issueRequest("PNR123", PRODUCTS, "tx-2"), null);
 
-        assertNotEquals(firstAttemptKey, capturedKey());
+        assertNotEquals(firstAttemptKey, capturedKey(),
+                "новая оплата той же брони приходит с другим transactionId и получает свой ключ");
+    }
+
+    @Test
+    void repeatOfTheSamePaymentKeepsTheSameKey() {
+        when(idempotencyRepository.findByIdempotencyKey(anyString())).thenReturn(Optional.empty());
+        when(idempotencyRepository.saveAndFlush(any())).thenAnswer(invocation -> invocation.getArgument(0));
+
+        service.begin(request, null);
+        String firstKey = capturedKey();
+
+        clearInvocations(idempotencyRepository);
+        when(idempotencyRepository.findByIdempotencyKey(anyString())).thenReturn(Optional.empty());
+        when(idempotencyRepository.saveAndFlush(any())).thenAnswer(invocation -> invocation.getArgument(0));
+        service.begin(PolicyRequests.issueRequest("PNR123", PRODUCTS, "tx-1"), null);
+
+        assertEquals(firstKey, capturedKey());
     }
 
     private String capturedKey() {
@@ -167,12 +184,6 @@ class IdempotencyServiceTest {
                 org.mockito.ArgumentCaptor.forClass(InsCentrumAirIdempotencyEntity.class);
         verify(idempotencyRepository).saveAndFlush(captor.capture());
         return captor.getValue().getIdempotencyKey();
-    }
-
-    private PolicyIssueRequest retry(PolicyIssueRequest source) {
-        return new PolicyIssueRequest(source.pnr(), source.paymentTime(), source.salesChannel(),
-                source.totalPremiumAmount(), source.premiumCurrency(), source.route(), source.language(),
-                source.products(), source.transactions(), source.insurant(), source.passengers(), 2);
     }
 
     private InsCentrumAirIdempotencyEntity existing(IdempotencyStatus status) {

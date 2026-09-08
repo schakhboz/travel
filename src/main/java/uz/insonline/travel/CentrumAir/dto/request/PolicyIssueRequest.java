@@ -5,7 +5,6 @@ import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotEmpty;
 import jakarta.validation.constraints.NotNull;
-import jakarta.validation.constraints.Positive;
 import uz.insonline.travel.CentrumAir.dto.*;
 
 import java.math.BigDecimal;
@@ -45,15 +44,5 @@ public record PolicyIssueRequest(
         @NotNull @Valid InsurantDto insurant,
 
         @Schema(description = "List of passengers to be insured", requiredMode = Schema.RequiredMode.REQUIRED)
-        @NotEmpty @Valid List<PassengerDto> passengers,
-
-        @Schema(description = "Payment attempt number for this booking. Together with PNR and the product list "
-                + "it forms the implicit idempotency key when the Idempotency-Key header is omitted (ТЗ п. 7.3).",
-                example = "1", defaultValue = "1")
-        @Positive Integer paymentAttempt
-) {
-
-    public int paymentAttemptOrFirst() {
-        return paymentAttempt != null ? paymentAttempt : 1;
-    }
-}
+        @NotEmpty @Valid List<PassengerDto> passengers
+) {}
