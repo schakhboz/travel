@@ -11,8 +11,7 @@ import uz.insonline.travel.CentrumAir.dto.response.ErspResponse;
 import uz.insonline.travel.CentrumAir.entity.InsCentrumAirRiskEntity;
 import uz.insonline.travel.CentrumAir.repository.InsCentrumAirRiskRepository;
 import uz.insonline.travel.CentrumAir.service.IssueResult;
-import uz.insonline.travel.certificate.api.CertificateRequest;
-import uz.insonline.travel.certificate.config.CertificateProperties;
+
 
 import java.time.LocalDate;
 import java.util.ArrayList;
@@ -23,6 +22,7 @@ import java.util.UUID;
 
 /**
  * Публикация заявки на сертификат в очередь после выпуска всех полисов брони (ТЗ п. 7.1, шаг 5).
+ * PDF и письмо готовит отдельный сервис — inson-certificate-service.
  * Выпуск не ждёт документов: ответ авиакомпании уходит сразу, PDF и письмо готовятся асинхронно.
  * Сбой публикации не отменяет выпущенные полисы — он только логируется.
  */
@@ -33,13 +33,13 @@ public class CertificateRequestPublisher {
 
     private final RabbitTemplate rabbitTemplate;
     private final InsCentrumAirRiskRepository riskRepository;
-    private final CertificateProperties properties;
+    private final CertificateQueueProperties properties;
 
     public void publish(PolicyIssueRequest request, IssueResult issued) {
         try {
             rabbitTemplate.convertAndSend(
-                    properties.getRabbit().getExchange(),
-                    properties.getRabbit().getRoutingKey(),
+                    properties.getExchange(),
+                    properties.getRoutingKey(),
                     toMessage(request, issued));
             log.info("Certificate request published for booking {} (PNR {})", issued.bookingId(), request.pnr());
         } catch (Exception e) {
@@ -48,13 +48,13 @@ public class CertificateRequestPublisher {
         }
     }
 
-    private CertificateRequest toMessage(PolicyIssueRequest request, IssueResult issued) {
+    private CertificateRequestMessage toMessage(PolicyIssueRequest request, IssueResult issued) {
         ProductSelection products = ProductSelection.of(request.products());
-        List<CertificateRequest.Policy> policies = issued.policies().stream()
+        List<CertificateRequestMessage.Policy> policies = issued.policies().stream()
                 .map(this::toPolicy)
                 .toList();
 
-        return new CertificateRequest(
+        return new CertificateRequestMessage(
                 UUID.randomUUID().toString(),
                 issued.bookingId(),
                 request.pnr(),
@@ -72,15 +72,15 @@ public class CertificateRequestPublisher {
         );
     }
 
-    private CertificateRequest.Policy toPolicy(ErspResponse policy) {
-        List<CertificateRequest.CoveredRisk> risks = new ArrayList<>();
+    private CertificateRequestMessage.Policy toPolicy(ErspResponse policy) {
+        List<CertificateRequestMessage.CoveredRisk> risks = new ArrayList<>();
         for (String riskCode : Arrays.stream(policy.getRiskCodes().split(",")).filter(code -> !code.isBlank()).toList()) {
             Optional<InsCentrumAirRiskEntity> risk = riskRepository.findByRiskCode(riskCode);
-            risks.add(new CertificateRequest.CoveredRisk(riskCode,
+            risks.add(new CertificateRequestMessage.CoveredRisk(riskCode,
                     risk.map(InsCentrumAirRiskEntity::getInsuranceSum).orElse(null),
                     risk.map(InsCentrumAirRiskEntity::getCurrency).orElse(null)));
         }
-        return new CertificateRequest.Policy(
+        return new CertificateRequestMessage.Policy(
                 policy.getPolicyGroup(),
                 policy.getPolicySeries(),
                 String.valueOf(policy.getPolicyNumber()),
@@ -90,10 +90,10 @@ public class CertificateRequestPublisher {
         );
     }
 
-    private static CertificateRequest.InsuredPerson toInsured(PassengerDto passenger) {
+    private static CertificateRequestMessage.InsuredPerson toInsured(PassengerDto passenger) {
         String fullName = String.join(" ", passenger.lastName(), passenger.firstName(),
                 passenger.middleName() == null ? "" : passenger.middleName()).trim();
-        return new CertificateRequest.InsuredPerson(
+        return new CertificateRequestMessage.InsuredPerson(
                 fullName,
                 passenger.passportSeries() + "-" + passenger.passportNumber(),
                 passenger.birthDate(),
