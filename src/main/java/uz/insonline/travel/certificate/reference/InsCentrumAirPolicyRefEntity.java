@@ -1,4 +1,4 @@
-package uz.insonline.travel.CentrumAir.entity;
+package uz.insonline.travel.certificate.reference;
 
 import jakarta.persistence.*;
 import lombok.*;

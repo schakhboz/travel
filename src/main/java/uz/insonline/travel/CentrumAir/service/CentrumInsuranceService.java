@@ -42,7 +42,7 @@ public class CentrumInsuranceService {
     private final InsCentrumAirBookingRepository bookingRepository;
     private final CentrumAirProperties properties;
 
-    public List<ErspResponse> issuePolicy(PolicyIssueRequest request, UserEntity user, IdempotencyRecord record) {
+    public IssueResult issuePolicy(PolicyIssueRequest request, UserEntity user, IdempotencyRecord record) {
         BigDecimal exchangeRate = properties.getEurRate();
         ProductSelection products = ProductSelection.of(request.products());
         PolicyCalculationResult calculation = calculationService.calculatePolicies(request, exchangeRate);
@@ -70,7 +70,7 @@ public class CentrumInsuranceService {
 
             policies.add(describe(issued, policyGroup, products, startDate, endDate, request.passengers().size()));
         }
-        return policies;
+        return new IssueResult(bookingId, policies);
     }
 
     /** Бронь фиксируется один раз на заявку: повтор после сбоя переиспользует ранее сохранённую. */

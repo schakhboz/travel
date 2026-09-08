@@ -1,0 +1,230 @@
+<!--
+  Шаблон страхового сертификата INSON (ТЗ п. 9.2).
+  Один раздел — одна страница: ВЗР, авиационный пакет, дополнительный багаж, питомец.
+  Разметка держится XHTML: openhtmltopdf разбирает документ строгим XML-парсером.
+-->
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8"/>
+    <title th:text="'INSON ' + ${certificate.certificateNumber}">INSON</title>
+    <style>
+        @page {
+            size: A4;
+            margin: 16mm 11mm 16mm 11mm;
+            @top-center { content: element(header); }
+            @bottom-center { content: element(footer); }
+        }
+
+        body {
+            font-family: "InsonSans", sans-serif;
+            font-size: 7.8pt;
+            color: #1a1a1a;
+            margin: 0;
+        }
+
+        #header { position: running(header); }
+        #footer { position: running(footer); }
+
+        .logo { font-size: 20pt; font-weight: 700; letter-spacing: -0.5pt; }
+        .logo .brand-dark { color: #133B7D; }
+        .logo .brand-light { color: #4FA83D; }
+        .logo img { height: 34px; }
+
+        .footer-strip {
+            border-top: 0.7pt solid #133B7D;
+            padding-top: 4pt;
+            color: #4a4a4a;
+            font-size: 7pt;
+            width: 100%;
+        }
+        .footer-strip td { vertical-align: top; }
+        .footer-strip .caption { font-weight: 700; color: #133B7D; }
+
+        table.doc {
+            width: 100%;
+            border-collapse: collapse;
+            border: 0.7pt solid #133B7D;
+        }
+        table.doc td, table.doc th {
+            border: 0.5pt solid #133B7D;
+            padding: 2.4pt 5pt;
+            vertical-align: top;
+            text-align: left;
+        }
+
+        .cert-title { font-size: 11pt; font-weight: 700; color: #133B7D; }
+        .cert-number { text-align: right; }
+        .cert-number .number { font-weight: 700; color: #133B7D; }
+        .cert-number .issued { color: #555555; font-size: 7.5pt; }
+
+        .section-title {
+            text-align: center;
+            font-size: 10.5pt;
+            font-weight: 700;
+            color: #1F63A8;
+            letter-spacing: 0.3pt;
+        }
+        .band {
+            background-color: #EFEFEF;
+            font-weight: 700;
+            text-transform: uppercase;
+            font-size: 8pt;
+        }
+        .label { width: 34%; font-weight: 700; text-transform: uppercase; font-size: 8pt; }
+        .value { font-weight: 700; }
+        .limit { text-align: right; white-space: nowrap; }
+
+        .coverage-total { background-color: #EFEFEF; font-weight: 700; }
+        .coverage-risk { font-weight: 700; }
+        .coverage-item { padding-left: 14pt; }
+
+        .qr { text-align: center; width: 33%; }
+        .qr img { width: 50px; height: 50px; }
+        .qr .channel { font-weight: 700; }
+
+        .steps { padding-left: 0; }
+        .steps p { margin: 0 0 1.5pt 0; }
+        .docs p { margin: 0 0 3.5pt 0; }
+        .docs .risk { font-weight: 700; }
+
+        .page-break { page-break-before: always; }
+    </style>
+</head>
+<body>
+
+<div id="header">
+    <div class="logo">
+        <img th:if="${logo != null}" th:src="${logo}" alt="INSON"/>
+        <span th:if="${logo == null}">
+            <span class="brand-dark">IN</span><span class="brand-light">SON</span>
+        </span>
+    </div>
+</div>
+
+<div id="footer">
+    <table class="footer-strip">
+        <tr>
+            <td width="33%">
+                <span class="caption">КОЛЛ-ЦЕНТР INSON 24/7</span><br/>
+                <span th:text="${brand.callCenter}">1371</span>
+            </td>
+            <td width="34%" style="text-align:center;">
+                <span class="caption">СТРАХОВОЙ СЕРТИФИКАТ</span><br/>
+                <span th:text="${certificate.certificateNumber}">CERT</span>
+            </td>
+            <td width="33%" style="text-align:right;">
+                <span class="caption">ПОДДЕРЖКА INSON 24/7</span><br/>
+                <span th:text="${brand.supportEmail}">info@insuranceon.uz</span>
+            </td>
+        </tr>
+    </table>
+</div>
+
+<div th:each="section, iter : ${certificate.sections}" th:classappend="${iter.index > 0} ? 'page-break' : ''">
+    <table class="doc">
+
+        <tr th:if="${iter.index == 0}">
+            <td colspan="2" class="cert-title">СТРАХОВОЙ СЕРТИФИКАТ</td>
+            <td class="cert-number">
+                <div class="number" th:text="'№ ' + ${certificate.certificateNumber}">№ CERT</div>
+                <div class="issued" th:text="'Выдан: ' + ${certificate.issueDate}">Выдан</div>
+            </td>
+        </tr>
+
+        <tr>
+            <td colspan="3" class="section-title" th:text="${section.title}">РАЗДЕЛ</td>
+        </tr>
+
+        <tr th:if="${section.showInsured}" class="band">
+            <td>ЗАСТРАХОВАННЫЕ ЛИЦА</td>
+            <td>ПАСПОРТ</td>
+            <td>ДАТА РОЖДЕНИЯ</td>
+        </tr>
+        <tr th:if="${section.showInsured}" th:each="person : ${certificate.insured}">
+            <td class="value" th:text="${person.fullName}">ФИО</td>
+            <td th:text="${person.passport}">Паспорт</td>
+            <td th:text="${person.birthDate}">Дата рождения</td>
+        </tr>
+
+        <tr th:each="attribute : ${section.attributes}">
+            <td class="label" th:text="${attribute.label}">Параметр</td>
+            <td colspan="2" th:text="${attribute.value}">Значение</td>
+        </tr>
+
+        <tr th:if="${!section.coverage.isEmpty()}" class="band">
+            <td colspan="2">ПОКРЫТИЕ (на каждого застрахованного)</td>
+            <td class="limit">СТРАХОВАЯ СУММА / ЛИМИТ</td>
+        </tr>
+        <tr th:each="row : ${section.coverage}"
+            th:classappend="${row.level == 0} ? 'coverage-total' : (${row.level == 1} ? 'coverage-risk' : '')">
+            <td colspan="2" th:classappend="${row.level == 2} ? 'coverage-item' : ''" th:text="${row.title}">Риск</td>
+            <td class="limit" th:text="${row.limit}">Лимит</td>
+        </tr>
+
+        <th:block th:if="${section.assistance != null}">
+            <tr class="band">
+                <td colspan="3" style="text-align:center;">КУДА ОБРАЩАТЬСЯ ПРИ СТРАХОВОМ СОБЫТИИ ЗА РУБЕЖОМ</td>
+            </tr>
+            <tr>
+                <td colspan="3" style="text-align:center;"
+                    th:text="${section.assistance.name} + ' · ' + ${section.assistance.schedule}">Ассистанс</td>
+            </tr>
+            <tr>
+                <td class="qr">
+                    <div class="channel">Telegram</div>
+                    <img th:if="${section.assistance.telegramQr != null}" th:src="${section.assistance.telegramQr}"
+                         alt="Telegram"/>
+                    <div th:text="${section.assistance.telegram}">+00</div>
+                </td>
+                <td class="qr">
+                    <div class="channel">WhatsApp</div>
+                    <img th:if="${section.assistance.whatsappQr != null}" th:src="${section.assistance.whatsappQr}"
+                         alt="WhatsApp"/>
+                    <div th:text="${section.assistance.whatsapp}">+00</div>
+                </td>
+                <td class="qr">
+                    <div class="channel">Для звонков (весь мир)</div>
+                    <div th:text="${section.assistance.phone}">+00</div>
+                    <div class="channel" style="margin-top:6pt;">E-mail</div>
+                    <div th:text="${section.assistance.email}">mail</div>
+                    <div class="channel" style="margin-top:6pt;">Заявление об убытке</div>
+                    <img th:if="${certificate.claimQrDataUri != null}" th:src="${certificate.claimQrDataUri}"
+                         alt="Заявление об убытке"/>
+                </td>
+            </tr>
+            <tr class="band">
+                <td colspan="3" style="text-align:center;">ЧТО ДЕЛАТЬ ПРИ НАСТУПЛЕНИИ СТРАХОВОГО СЛУЧАЯ ЗА РУБЕЖОМ</td>
+            </tr>
+            <tr>
+                <td colspan="3" class="steps">
+                    <p th:each="step, stepIter : ${section.assistance.instructions}"
+                       th:text="${stepIter.count} + '. ' + ${step}">Шаг</p>
+                </td>
+            </tr>
+            <tr class="band">
+                <td colspan="2" style="text-align:center;"
+                    th:text="'ССЫЛКА НА ОФЕРТУ: ' + ${section.assistance.offerUrl}">Оферта</td>
+                <td style="text-align:center;"
+                    th:text="'ПРОГРАММА: ' + ${section.assistance.programUrl}">Программа</td>
+            </tr>
+        </th:block>
+
+        <th:block th:if="${!section.documents.isEmpty()}">
+            <tr class="band">
+                <td colspan="3" style="text-align:center;">НЕОБХОДИМЫЕ ДОКУМЕНТЫ ДЛЯ СТРАХОВОЙ ВЫПЛАТЫ</td>
+            </tr>
+            <tr>
+                <td colspan="3" class="docs">
+                    <p th:each="block : ${section.documents}">
+                        <span class="risk" th:text="${block.risk} + ': '">Риск: </span>
+                        <span th:text="${block.documents}">документы</span>
+                    </p>
+                </td>
+            </tr>
+        </th:block>
+
+    </table>
+</div>
+
+</body>
+</html>

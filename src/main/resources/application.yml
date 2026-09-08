@@ -1,4 +1,6 @@
 spring:
+  config:
+    import: classpath:certificate-content.yml
   datasource:
     username: osago
     password: uzb
@@ -105,3 +107,12 @@ centrum-air:
     strict-product-rules: true
     check-premium: false
     premium-tolerance: 0.01
+
+# Объектное хранилище сертификатов
+minio:
+  endpoint: http://10.10.11.51:9000
+  access-key: ${MINIO_ACCESS_KEY:minioadmin}
+  secret-key: ${MINIO_SECRET_KEY:minioadmin}
+  bucket: insurance-certificates
+  create-bucket: true
+  link-expiry: 7d

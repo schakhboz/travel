@@ -10,6 +10,7 @@ import uz.insonline.travel.CentrumAir.dto.request.PolicyIssueRequest;
 import uz.insonline.travel.CentrumAir.dto.response.ErspResponse;
 import uz.insonline.travel.CentrumAir.dto.response.PolicyIssueResponse;
 import uz.insonline.travel.CentrumAir.idempotency.IdempotencyRecord;
+import uz.insonline.travel.CentrumAir.certificate.CertificateRequestPublisher;
 import uz.insonline.travel.CentrumAir.idempotency.IdempotencyService;
 import uz.insonline.travel.authentication.entity.UserEntity;
 
@@ -31,6 +32,7 @@ public class PolicyService {
     private final CentrumInsuranceService centrumInsuranceService;
     private final CentrumInsuranceGetService centrumInsuranceGetService;
     private final IdempotencyService idempotencyService;
+    private final CertificateRequestPublisher certificatePublisher;
 
     public PolicyIssueResponse getPolicies(PolicyJournalFilter filter) {
         return centrumInsuranceGetService.getPolicies(filter);
@@ -45,9 +47,12 @@ public class PolicyService {
         }
 
         try {
-            List<ErspResponse> issued = centrumInsuranceService.issuePolicy(request, currentUser(), record);
-            PolicyIssueResponse response = PolicyIssueResponse.success(List.of(content(request, issued)));
+            IssueResult issued = centrumInsuranceService.issuePolicy(request, currentUser(), record);
+            PolicyIssueResponse response = PolicyIssueResponse.success(List.of(content(request, issued.policies())));
             idempotencyService.complete(record.id(), response);
+
+            // Сертификат и письмо пассажиру готовятся асинхронно: ответ а/к не ждёт PDF (ТЗ п. 7.5).
+            certificatePublisher.publish(request, issued);
             return response;
         } catch (RuntimeException e) {
             log.error("Issue failed for PNR {} (idempotencyKey={})", request.pnr(), record.key(), e);

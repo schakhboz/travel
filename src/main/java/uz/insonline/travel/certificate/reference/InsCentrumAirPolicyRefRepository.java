@@ -1,9 +1,12 @@
-package uz.insonline.travel.CentrumAir.repository;
+package uz.insonline.travel.certificate.reference;
 
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
-import uz.insonline.travel.CentrumAir.entity.InsCentrumAirPolicyRefEntity;
+
+import java.util.Optional;
 
 @Repository
 public interface InsCentrumAirPolicyRefRepository extends JpaRepository<InsCentrumAirPolicyRefEntity, Long> {
+
+    Optional<InsCentrumAirPolicyRefEntity> findByRiskCode(String riskCode);
 }

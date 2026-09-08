@@ -4,6 +4,7 @@ import org.springframework.amqp.core.Binding;
 import org.springframework.amqp.core.BindingBuilder;
 import org.springframework.amqp.core.Queue;
 import org.springframework.amqp.core.TopicExchange;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import org.springframework.amqp.support.converter.Jackson2JsonMessageConverter;
 import org.springframework.amqp.support.converter.MessageConverter;
 import org.springframework.context.annotation.Bean;
@@ -34,8 +35,12 @@ public class RabbitMQConfig {
                 .with(SMS_ROUTING_KEY);
     }
 
+    /**
+     * Общий конвертер очередей. Использует ObjectMapper приложения — иначе даты java.time
+     * (LocalDate в заявке на сертификат) не сериализуются.
+     */
     @Bean
-    public MessageConverter messageConverter() {
-        return new Jackson2JsonMessageConverter();
+    public MessageConverter messageConverter(ObjectMapper objectMapper) {
+        return new Jackson2JsonMessageConverter(objectMapper);
     }
 }
