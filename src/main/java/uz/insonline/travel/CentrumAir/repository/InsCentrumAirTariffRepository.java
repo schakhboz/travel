@@ -17,4 +17,12 @@ public interface InsCentrumAirTariffRepository extends JpaRepository<InsCentrumA
     List<InsCentrumAirTariffEntity> findByPolicyGroup(@Param("policyGroup") Integer policyGroup);
 
     List<InsCentrumAirTariffEntity> findByTariffCodeAndRiskRiskCode(String tariffCode, String riskCode);
+
+    /** Тарифная матрица для справочника: риск подгружается сразу, без отдельного запроса на строку. */
+    @Query("SELECT t FROM InsCentrumAirTariffEntity t JOIN FETCH t.risk r "
+            + "WHERE (:policyGroup IS NULL OR t.policyGroup = :policyGroup) "
+            + "AND (:tariffCode IS NULL OR UPPER(t.tariffCode) = :tariffCode) "
+            + "ORDER BY t.policyGroup, t.tariffCode, r.riskCode")
+    List<InsCentrumAirTariffEntity> findForDictionary(@Param("policyGroup") Integer policyGroup,
+                                                      @Param("tariffCode") String tariffCode);
 }

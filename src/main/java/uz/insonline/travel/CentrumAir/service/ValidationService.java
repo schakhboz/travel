@@ -5,6 +5,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
 import uz.insonline.travel.CentrumAir.config.CentrumAirProperties;
+import uz.insonline.travel.CentrumAir.domain.ProductRules;
 import uz.insonline.travel.CentrumAir.domain.ProductSelection;
 import uz.insonline.travel.CentrumAir.dto.InsurantDto;
 import uz.insonline.travel.CentrumAir.dto.PassengerDto;
@@ -155,26 +156,11 @@ public class ValidationService {
         }
     }
 
-    /** Допустимость комбинации продуктов (ТЗ п. 7.6.2). */
+    /** Допустимость комбинации продуктов (ТЗ п. 7.6.2) — те же правила, что и в калькуляторе. */
     private void validateProductCombination(PolicyIssueRequest request) {
-        ProductSelection products = ProductSelection.of(request.products());
-        RouteDto route = request.route();
-
-        if (countOf(request.products(), ProductSelection.TRAVEL) > 1) {
-            throw CentrumAirApiException.validation("Only one TRAVEL product per booking is allowed");
-        }
-        if (packageCount(request.products()) > 1) {
-            throw CentrumAirApiException.validation("Only one aviation package per booking is allowed");
-        }
-        if (products.has(ProductSelection.TRAVEL)
-                && !(Boolean.TRUE.equals(route.isInternational()) && PolicyCalculationService.isRoundTrip(request))) {
-            throw CentrumAirApiException.validation("TRAVEL is available for international round-trip routes only");
-        }
-        if (products.packageCode() == null
-                && (products.has(ProductSelection.ANIMAL) || products.has(ProductSelection.ADDON_BAGGAGE))) {
-            throw CentrumAirApiException.validation(
-                    "ANIMAL and ADDON_BAGGAGE require an aviation package in the same booking");
-        }
+        ProductRules.validate(request.products(),
+                Boolean.TRUE.equals(request.route().isInternational()),
+                PolicyCalculationService.isRoundTrip(request));
     }
 
     /** Сверка премии авиакомпании с расчётом по тарифной матрице в пределах допуска (ТЗ п. 7.6.4). */
@@ -196,18 +182,6 @@ public class ValidationService {
             throw CentrumAirApiException.validation("totalPremiumAmount " + request.totalPremiumAmount()
                     + " does not match the tariff matrix amount " + expected);
         }
-    }
-
-    private static long countOf(List<ProductDto> products, String productCode) {
-        return products.stream()
-                .filter(product -> productCode.equalsIgnoreCase(product.productCode()))
-                .count();
-    }
-
-    private static long packageCount(List<ProductDto> products) {
-        return products.stream()
-                .filter(product -> ProductSelection.of(List.of(product)).packageCode() != null)
-                .count();
     }
 
     private void validateRequired(Object value, String fieldName) {

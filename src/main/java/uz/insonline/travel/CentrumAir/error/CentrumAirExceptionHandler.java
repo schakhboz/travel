@@ -8,16 +8,18 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 import uz.insonline.travel.CentrumAir.controller.PolicyController;
+import uz.insonline.travel.CentrumAir.dictionary.controller.CalculatorController;
+import uz.insonline.travel.CentrumAir.dictionary.controller.DictionaryController;
 
 import java.util.UUID;
 
 /**
  * Ошибки Centrum Air отдаются в формате ТЗ п. 7.6.6: код, описание на английском, идентификатор запроса.
- * Действует только на {@link PolicyController}, остальные модули продолжает обслуживать общий обработчик.
+ * Действует только на контроллеры Centrum Air, остальные модули продолжает обслуживать общий обработчик.
  */
 @Slf4j
 @Order(Ordered.HIGHEST_PRECEDENCE)
-@RestControllerAdvice(assignableTypes = PolicyController.class)
+@RestControllerAdvice(assignableTypes = {PolicyController.class, DictionaryController.class, CalculatorController.class})
 public class CentrumAirExceptionHandler {
 
     public static final String REQUEST_ID_HEADER = "X-Request-Id";

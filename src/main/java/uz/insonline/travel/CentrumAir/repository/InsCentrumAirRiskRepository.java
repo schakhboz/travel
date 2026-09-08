@@ -13,4 +13,6 @@ public interface InsCentrumAirRiskRepository extends JpaRepository<InsCentrumAir
     Optional<InsCentrumAirRiskEntity> findByRiskCode(String riskCode);
 
     List<InsCentrumAirRiskEntity> findAllByRiskCode(String riskCode);
+
+    List<InsCentrumAirRiskEntity> findAllByOrderByRiskCodeAsc();
 }

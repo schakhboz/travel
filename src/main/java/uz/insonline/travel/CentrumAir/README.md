@@ -9,6 +9,9 @@
 | POST   | `/policy/issue`                  | Выпуск полисов по брони (идемпотентный)           |
 | DELETE | `/policy/cancel`                 | Аннуляция полиса при возврате билета               |
 | GET    | `/policies` (и `/policy/policies`) | Журнал полисов: период, продукт, статус          |
+| GET    | `/dictionary/tariffs`            | Тарифная матрица: ставки по продуктам и типам маршрута |
+| GET    | `/dictionary/risks`              | Реестр рисков: классы и страховые суммы            |
+| POST   | `/calculator`                    | Расчёт премии с расшифровкой, без выпуска          |
 
 `/policy/policies` оставлен как алиас, чтобы не ломать текущую интеграцию; ТЗ требует `/policies`.
 
@@ -39,11 +42,33 @@
 Таблицы создаются скриптом `src/main/resources/db/centrum_air_idempotency.sql`
 (`ddl-auto: validate` — DDL приложением не создаётся).
 
+## Калькулятор для партнёров
+
+`POST /calculator` показывает, как складывается премия: параметры поездки без персональных данных
+на входе, на выходе — состав полисов, слагаемые премии каждого полиса (тарифная ставка, множитель,
+формула) и доля каждого риска с его страховой суммой. Ничего не сохраняется и не выпускается.
+
+```json
+{
+  "routeType": "RT", "isInternational": true, "isSchengen": false,
+  "passengerCount": 2,
+  "departureDate": "2026-09-04", "returnDate": "2026-09-15",
+  "products": [{"productCode": "MAXIMUM"}, {"productCode": "ADDON_BAGGAGE", "quantity": 2}]
+}
+```
+
+Арифметика — та же, что в `POST /policy/issue`: обе ветки читают одну тарифную матрицу и делят
+премию по рискам одним методом `PolicyCalculationService.splitPremiumByRisk`. Правила совместимости
+продуктов вынесены в `ProductRules` и действуют одинаково при выпуске и в калькуляторе, поэтому
+партнёр видит те же отказы, что получит при выпуске. Совпадение сумм закреплено тестом
+`PremiumCalculatorServiceTest`: если формулы разъедутся, сборка упадёт.
+
 ## Структура
 
 ```
 config/      настройки модуля (продукт, курс, имена функций НАПП, пороги валидации)
-domain/      ProductSelection, RiskCatalog, Kontragent — правила без БД и Spring
+dictionary/  справочники тарифов и рисков, калькулятор премии для партнёров
+domain/      ProductSelection, RiskCatalog, ProductRules, Kontragent — правила без БД и Spring
 error/       коды ошибок ТЗ п. 7.6.6 и обработчик только для PolicyController
 idempotency/ ключи, состояние заявки, довыпуск
 jdbc/        весь прямой SQL и вызовы пакета ERSP_VOLUNTARY_INTEGRATIONS
