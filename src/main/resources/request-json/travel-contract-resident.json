@@ -1,0 +1,41 @@
+{
+  "applicant": {
+    "person": {
+      "gender": 1,
+      "phone":"998901234567",
+      "passport_series": "AB",
+      "passport_number": "6276224",
+      "birth_date": "2001-02-22",
+      "first_name": "Diyorbek",
+      "last_name": "Uralbaev",
+      "is_resident": 1
+    },
+    "is_applicant_traveler": 1
+  },
+  "details": {
+    "start_date": "2025-05-15",
+    "travel_type": 0,
+    "activity_type": 1,
+    "group_type": 1,
+    "program_type": 1,
+    "travel_days": 14,
+    "multi_day_type": 6,
+    "countries": [
+      "RU"
+    ]
+  },
+  "travelers": [
+    {
+      "person": {
+        "gender": 1,
+        "phone":"998901234567",
+        "passport_series": "AB",
+        "passport_number": "6276224",
+        "birth_date": "2001-02-22",
+        "first_name": "Diyorbek",
+        "last_name": "Uralbaev",
+        "is_resident": 1
+      }
+    }
+  ]
+}

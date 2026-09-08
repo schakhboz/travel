@@ -1,0 +1,90 @@
+spring:
+  datasource:
+    username: osago
+    password: uzb
+    #    url: jdbc:oracle:thin:@10.10.11.161:1521:OSAGO
+    url: jdbc:oracle:thin:@osagodb-test.insuranceon.local:1521:OSAGO
+    hikari:
+      maximum-pool-size: 50
+      minimum-idle: 10
+      connection-timeout: 30000
+      idle-timeout: 600000
+      max-lifetime: 1800000
+      leak-detection-threshold: 15000
+  jpa:
+    show-sql: true
+    hibernate:
+      ddl-auto: validate
+
+  rabbitmq:
+    host: 10.10.11.51
+    port: 5672
+    username: admin
+    password: rabbit_test
+    virtual-host: /
+    listener:
+      simple:
+        retry:
+          enabled: true
+          max-attempts: 3
+          initial-interval: 1000ms
+  mail:
+    host: smtp.gmail.com
+    port: 587
+    username: applecor.timcook@gmail.com
+    password: tjoa elyj itwc wbxk
+    properties:
+      mail:
+        smtp:
+          auth: true
+          starttls:
+            enable: true
+  application:
+    name: insurance_products
+
+logging:
+  file:
+    path: /home/developer1/logs/travel
+  level:
+    root: info
+  logback:
+    rolling-policy:
+      clean-history-on-start: false
+      max-file-size: 20MB
+      max-history: 366
+
+#tokenni amal qilish muddati (sutkalarda)
+token:
+  expiration:
+    time: 100000000000
+  #security key token
+  security:
+    key: nCIQjc9F+dH07C68ioqilIUTZp5VKQZKH4E9MP2yU5acglyVlCVGozPIZlhhENpk+X9NymDBLKRN51rqCTvp5A==
+
+#serverdagi errorlarni korsatishi uchun
+server:
+  error:
+    include-binding-errors: always
+  port: 8084
+  url: https://api-travel.insonline.uz
+
+policy:
+  secret-key: OLD_POLICY_DATA_SECRET_KEY_NO_BODY_GONNA_KNOW_IT
+
+ratelimit:
+  MAX_REQUESTS: 2
+  TIME_WINDOW: 1000
+
+fond:
+  policy-url: https://ersp.e-osgo.uz/site/export-to-pdf?oldAlso=yes&id=
+
+springdoc:
+  model-and-view-allowed: true
+  use-fqn: true
+
+telegram:
+  token: 7532195372:AAGwhy8Mc7NnTCh5I5GIrV9YQJhPRU6v9l4
+  chats:
+    #    inson_dev: 950023045
+    tech_support: -4829715284
+  username: "@tech_error_inson_test_bot"
