@@ -19,7 +19,7 @@ public class InsCentrumAirIdempotencyEntity {
     @Id
     @GeneratedValue(strategy = GenerationType.SEQUENCE, generator = "seq_ca_idempotency_gen")
     @SequenceGenerator(name = "seq_ca_idempotency_gen",
-            sequenceName = "SEQ_INS_CENTRUM_AIR_IDEMPOTENCY", allocationSize = 1)
+            sequenceName = "SEQ_INS_CA_IDEMPOTENCY", allocationSize = 1)
     @Column(name = "ID")
     private Long id;
 

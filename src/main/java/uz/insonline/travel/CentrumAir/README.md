@@ -39,8 +39,8 @@
 третьем полисе не откатывает первые два, а факт выпуска сразу пишется в
 `INS_CENTRUM_AIR_IDEMP_POLICY`.
 
-Таблицы создаются скриптом `src/main/resources/db/centrum_air_idempotency.sql`
-(`ddl-auto: validate` — DDL приложением не создаётся).
+Таблицы создаются скриптом `src/main/resources/db/centrum_air_idempotency.sql` (Oracle 11g;
+`ddl-auto: validate` — DDL приложением не создаётся).
 
 ## Калькулятор для партнёров
 

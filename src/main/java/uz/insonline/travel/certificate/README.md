@@ -69,7 +69,7 @@ minio:
 текстового логотипа. Шрифт документа — `resources/fonts/DejaVuSans*.ttf`, заменяется на
 корпоративный правкой `CertificatePdfRenderer`.
 
-Таблицы и последовательности — в `src/main/resources/db/centrum_air_idempotency.sql`.
+Таблица и последовательности — в `src/main/resources/db/insurance_certificate.sql` (Oracle 11g).
 
 ## Что не сделано
 
