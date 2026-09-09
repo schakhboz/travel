@@ -20,7 +20,7 @@ import uz.insonline.travel.CentrumAir.dictionary.service.DictionaryService;
 import uz.insonline.travel.CentrumAir.error.ApiErrorResponse;
 
 @RestController
-@RequestMapping("/dictionary")
+@RequestMapping("/centrum-air/dictionary")
 @RequiredArgsConstructor
 @Tag(name = "Centrum Air dictionaries",
         description = "Tariff matrix and risk registry the premium calculation is based on")
