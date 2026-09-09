@@ -215,11 +215,11 @@ public class PremiumCalculatorService {
 
     private static String policyName(int policyGroup) {
         return switch (policyGroup) {
-            case 0 -> "П0 — ВЗР: медицинские расходы, смерть застрахованного";
-            case 1 -> "П1 — несчастный случай, багаж, дополнительный багаж, питомец";
-            case 2 -> "П2 — отмена поездки";
-            case 3 -> "П3 — задержка рейса, утрата документов";
-            default -> "П" + policyGroup;
+            case 0 -> "P0 - Travel: medical expenses, death of the insured";
+            case 1 -> "P1 - Accident, baggage, additional baggage, pet";
+            case 2 -> "P2 - Trip cancellation";
+            case 3 -> "P3 - Flight delay, loss of documents";
+            default -> "P" + policyGroup;
         };
     }
 
