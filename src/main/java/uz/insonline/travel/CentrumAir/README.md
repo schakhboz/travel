@@ -76,8 +76,8 @@
 ```
 
 Арифметика — та же, что в `POST /policy/issue`: обе ветки читают одну тарифную матрицу и делят
-премию по рискам одним методом `PolicyCalculationService.splitPremiumByRisk`. Правила совместимости
-продуктов вынесены в `ProductRules` и действуют одинаково при выпуске и в калькуляторе, поэтому
+премию по рискам одним методом `PolicyCalculationService.splitPremiumByRisk`. Правила совместимости продуктов живут в
+`ValidationService.validateProductCombination` и вызываются и выпуском, и калькулятором, поэтому
 партнёр видит те же отказы, что получит при выпуске. Совпадение сумм закреплено тестом
 `PremiumCalculatorServiceTest`: если формулы разъедутся, сборка упадёт.
 
@@ -86,7 +86,7 @@
 ```
 config/      настройки модуля (продукт, курс, имена функций НАПП, пороги валидации)
 dictionary/  справочники тарифов и рисков, калькулятор премии для партнёров
-domain/      ProductSelection, RiskCatalog, ProductRules, Kontragent — правила без БД и Spring
+domain/      ProductSelection, RiskCatalog, Kontragent — правила без БД и Spring
 error/       коды ошибок ТЗ п. 7.6.6 и обработчик только для PolicyController
 idempotency/ ключи, состояние заявки, довыпуск
 jdbc/        весь прямой SQL и вызовы пакета ERSP_VOLUNTARY_INTEGRATIONS

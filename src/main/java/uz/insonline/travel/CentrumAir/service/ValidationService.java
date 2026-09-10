@@ -5,7 +5,6 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
 import uz.insonline.travel.CentrumAir.config.CentrumAirProperties;
-import uz.insonline.travel.CentrumAir.domain.ProductRules;
 import uz.insonline.travel.CentrumAir.domain.ProductSelection;
 import uz.insonline.travel.CentrumAir.dto.InsurantDto;
 import uz.insonline.travel.CentrumAir.dto.PassengerDto;
@@ -54,7 +53,9 @@ public class ValidationService {
 
         validateDeparturesAfterPayment(request);
         if (properties.getValidation().isStrictProductRules()) {
-            validateProductCombination(request);
+            validateProductCombination(request.products(),
+                    Boolean.TRUE.equals(request.route().isInternational()),
+                    PolicyCalculationService.isRoundTrip(request));
         }
         if (properties.getValidation().isCheckPremium()) {
             validatePremium(request);
@@ -155,11 +156,27 @@ public class ValidationService {
         }
     }
 
-    /** Допустимость комбинации продуктов (ТЗ п. 7.6.2) — те же правила, что и в калькуляторе. */
-    private void validateProductCombination(PolicyIssueRequest request) {
-        ProductRules.validate(request.products(),
-                Boolean.TRUE.equals(request.route().isInternational()),
-                PolicyCalculationService.isRoundTrip(request));
+    /**
+     * Допустимость комбинации продуктов (ТЗ п. 7.6.2). Статический метод, потому что теми же
+     * правилами пользуется калькулятор премии: партнёр должен видеть те же отказы, что получит при выпуске.
+     */
+    public static void validateProductCombination(List<ProductDto> products, boolean international, boolean roundTrip) {
+        ProductSelection selection = ProductSelection.of(products);
+
+        if (countOf(products, ProductSelection.TRAVEL) > 1) {
+            throw CentrumAirApiException.validation("Only one TRAVEL product per booking is allowed");
+        }
+        if (packageCount(products) > 1) {
+            throw CentrumAirApiException.validation("Only one aviation package per booking is allowed");
+        }
+        if (selection.has(ProductSelection.TRAVEL) && !(international && roundTrip)) {
+            throw CentrumAirApiException.validation("TRAVEL is available for international round-trip routes only");
+        }
+        if (selection.packageCode() == null
+                && (selection.has(ProductSelection.ANIMAL) || selection.has(ProductSelection.ADDON_BAGGAGE))) {
+            throw CentrumAirApiException.validation(
+                    "ANIMAL and ADDON_BAGGAGE require an aviation package in the same booking");
+        }
     }
 
     /**
@@ -189,6 +206,18 @@ public class ValidationService {
 
     private static String plain(BigDecimal amount) {
         return amount.stripTrailingZeros().toPlainString();
+    }
+
+    private static long countOf(List<ProductDto> products, String productCode) {
+        return products.stream()
+                .filter(product -> productCode.equalsIgnoreCase(product.productCode()))
+                .count();
+    }
+
+    private static long packageCount(List<ProductDto> products) {
+        return products.stream()
+                .filter(product -> ProductSelection.of(List.of(product)).packageCode() != null)
+                .count();
     }
 
     private void validateRequired(Object value, String fieldName) {

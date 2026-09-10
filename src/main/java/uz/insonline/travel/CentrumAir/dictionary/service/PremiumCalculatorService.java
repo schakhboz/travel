@@ -5,7 +5,6 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import uz.insonline.travel.CentrumAir.config.CentrumAirProperties;
 import uz.insonline.travel.CentrumAir.dictionary.dto.*;
-import uz.insonline.travel.CentrumAir.domain.ProductRules;
 import uz.insonline.travel.CentrumAir.domain.ProductSelection;
 import uz.insonline.travel.CentrumAir.domain.RiskCatalog;
 import uz.insonline.travel.CentrumAir.entity.InsCentrumAirRiskEntity;
@@ -14,6 +13,7 @@ import uz.insonline.travel.CentrumAir.error.CentrumAirApiException;
 import uz.insonline.travel.CentrumAir.repository.InsCentrumAirRiskRepository;
 import uz.insonline.travel.CentrumAir.repository.InsCentrumAirTariffRepository;
 import uz.insonline.travel.CentrumAir.service.PolicyCalculationService;
+import uz.insonline.travel.CentrumAir.service.ValidationService;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
@@ -207,7 +207,7 @@ public class PremiumCalculatorService {
         }
 
         if (properties.getValidation().isStrictProductRules()) {
-            ProductRules.validate(request.products(),
+            ValidationService.validateProductCombination(request.products(),
                     Boolean.TRUE.equals(request.isInternational()),
                     "RT".equalsIgnoreCase(request.routeType()));
         }
