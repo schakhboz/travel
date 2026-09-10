@@ -41,13 +41,13 @@ public class CentrumAirProperties {
         private boolean strictProductRules = true;
 
         /**
-         * Сверка премии авиакомпании с расчётом по тарифной матрице (ТЗ п. 7.6.4).
-         * Включается после согласования разбивки премии по рискам (открытый вопрос ТЗ п. 13).
+         * Сверка премии авиакомпании с расчётом по тарифной матрице (ТЗ п. 7.6.4):
+         * заявленная сумма не может быть выше расчёта INSON.
          */
-        private boolean checkPremium = false;
+        private boolean checkPremium = true;
 
-        /** Допустимое относительное отклонение премии, 0.01 = 1%. */
-        private BigDecimal premiumTolerance = new BigDecimal("0.01");
+        /** Допуск на округление, UZS. По умолчанию 0 — сравнение строгое. */
+        private BigDecimal premiumTolerance = BigDecimal.ZERO;
     }
 
     /** Идемпотентность выпуска (ТЗ п. 7.3). */

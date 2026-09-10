@@ -103,8 +103,10 @@ centrum-air:
     in-progress-timeout: 5m
   validation:
     strict-product-rules: true
-    check-premium: false
-    premium-tolerance: 0.01
+    # Премия, заявленная а/к, не может быть выше расчёта по тарифной матрице
+    check-premium: true
+    # Допуск на округление, UZS
+    premium-tolerance: 0
 
 # Очередь заявок на сертификат: документы готовит отдельный сервис (inson-certificate-service)
 certificate:

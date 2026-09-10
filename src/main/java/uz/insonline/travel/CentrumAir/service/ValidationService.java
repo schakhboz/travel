@@ -12,12 +12,11 @@ import uz.insonline.travel.CentrumAir.dto.PassengerDto;
 import uz.insonline.travel.CentrumAir.dto.ProductDto;
 import uz.insonline.travel.CentrumAir.dto.RouteDto;
 import uz.insonline.travel.CentrumAir.dto.SegmentDto;
-import uz.insonline.travel.CentrumAir.dto.calculation.PolicyCalculationResult;
 import uz.insonline.travel.CentrumAir.dto.request.PolicyIssueRequest;
 import uz.insonline.travel.CentrumAir.error.CentrumAirApiException;
+import uz.insonline.travel.CentrumAir.error.CentrumAirErrorCode;
 
 import java.math.BigDecimal;
-import java.math.RoundingMode;
 import java.time.OffsetDateTime;
 import java.util.List;
 import java.util.regex.Pattern;
@@ -163,25 +162,33 @@ public class ValidationService {
                 PolicyCalculationService.isRoundTrip(request));
     }
 
-    /** Сверка премии авиакомпании с расчётом по тарифной матрице в пределах допуска (ТЗ п. 7.6.4). */
+    /**
+     * Сверка премии с тарифной матрицей (ТЗ п. 7.6.4): сумма, заявленная авиакомпанией,
+     * не может быть выше расчёта INSON — иначе с пассажира взято больше, чем стоит страховка.
+     * Заявленная сумма ниже расчёта допустима: полисы всё равно выпускаются по тарифу.
+     */
     private void validatePremium(PolicyIssueRequest request) {
         if (!"UZS".equalsIgnoreCase(request.premiumCurrency())) {
             log.info("Premium check skipped: request currency is {}", request.premiumCurrency());
             return;
         }
 
-        PolicyCalculationResult calculation = calculationService.calculatePolicies(request, properties.getEurRate());
-        BigDecimal expected = calculation.totalPremiumAmount();
-        if (expected.signum() == 0) {
-            return;
-        }
+        BigDecimal calculated = calculationService.calculatePolicies(request, properties.getEurRate())
+                .totalPremiumAmount();
+        BigDecimal reported = request.totalPremiumAmount();
+        BigDecimal allowed = calculated.add(properties.getValidation().getPremiumTolerance());
 
-        BigDecimal deviation = request.totalPremiumAmount().subtract(expected).abs()
-                .divide(expected, 4, RoundingMode.HALF_UP);
-        if (deviation.compareTo(properties.getValidation().getPremiumTolerance()) > 0) {
-            throw CentrumAirApiException.validation("totalPremiumAmount " + request.totalPremiumAmount()
-                    + " does not match the tariff matrix amount " + expected);
+        if (allowed.compareTo(reported) < 0) {
+            throw new CentrumAirApiException(CentrumAirErrorCode.PREMIUM_MISMATCH,
+                    "Calculated premium " + plain(calculated) + " is less than totalPremiumAmount "
+                            + plain(reported) + " sent in the request");
         }
+        log.debug("Premium check passed for PNR {}: calculated {}, reported {}",
+                request.pnr(), calculated, reported);
+    }
+
+    private static String plain(BigDecimal amount) {
+        return amount.stripTrailingZeros().toPlainString();
     }
 
     private void validateRequired(Object value, String fieldName) {
