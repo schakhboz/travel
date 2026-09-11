@@ -8,7 +8,6 @@ import org.springframework.http.HttpStatus;
 public enum CentrumAirErrorCode {
 
     VALIDATION_ERROR(HttpStatus.BAD_REQUEST),
-    DUPLICATE(HttpStatus.CONFLICT),
     PREMIUM_MISMATCH(HttpStatus.BAD_REQUEST),
     IDEMPOTENCY_KEY_REUSE(HttpStatus.UNPROCESSABLE_ENTITY),
     ISSUE_IN_PROGRESS(HttpStatus.CONFLICT),

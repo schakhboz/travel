@@ -33,15 +33,14 @@ public class PolicyController {
     @Operation(summary = "Issue insurance policies",
             description = "Creates one or more policies for a booking. The request is idempotent: repeating it with "
                     + "the same Idempotency-Key returns the result of the first issue and never creates duplicates. "
-                    + "After a partial failure a repeat issues only the missing policies. When the header is omitted, "
-                    + "the key is derived from PNR, the product list and the payment transaction ids "
-                    + "(paymentTime when no transactions are sent).")
+                    + "After a partial failure a repeat issues only the missing policies. The Idempotency-Key "
+                    + "header is required.")
     @ApiResponses(value = {
             @ApiResponse(responseCode = "200", description = "Policies issued successfully",
                     content = @Content(schema = @Schema(implementation = PolicyIssueResponse.class))),
             @ApiResponse(responseCode = "400", description = "Invalid request data",
                     content = @Content(schema = @Schema(implementation = ApiErrorResponse.class))),
-            @ApiResponse(responseCode = "409", description = "Duplicate booking or issue already in progress",
+            @ApiResponse(responseCode = "409", description = "An issue with the same key is already in progress",
                     content = @Content(schema = @Schema(implementation = ApiErrorResponse.class))),
             @ApiResponse(responseCode = "422", description = "Idempotency key reused with a different payload",
                     content = @Content(schema = @Schema(implementation = ApiErrorResponse.class))),
@@ -49,7 +48,8 @@ public class PolicyController {
     })
     public ResponseEntity<PolicyIssueResponse> issuePolicy(
             @RequestBody PolicyIssueRequest request,
-            @Parameter(description = "Idempotency key of the issue request (ТЗ п. 7.3)")
+            @Parameter(description = "Idempotency key of the issue request, required (ТЗ п. 7.3)",
+                    required = true)
             @RequestHeader(value = IDEMPOTENCY_KEY_HEADER, required = false) String idempotencyKey) {
         return ResponseEntity.ok(policyService.issuePolicy(request, idempotencyKey));
     }

@@ -10,7 +10,6 @@ import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 import uz.insonline.travel.CentrumAir.config.CentrumAirProperties;
 import uz.insonline.travel.CentrumAir.domain.ProductSelection;
-import uz.insonline.travel.CentrumAir.dto.TransactionDto;
 import uz.insonline.travel.CentrumAir.dto.request.PolicyIssueRequest;
 import uz.insonline.travel.CentrumAir.dto.response.PolicyIssueResponse;
 import uz.insonline.travel.CentrumAir.error.CentrumAirApiException;
@@ -24,31 +23,24 @@ import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.time.OffsetDateTime;
-import java.util.EnumSet;
 import java.util.HexFormat;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
-import java.util.stream.Collectors;
 
 /**
  * Идемпотентность выпуска (ТЗ п. 7.3):
  * <ul>
- *   <li>ключ — заголовок {@code Idempotency-Key}, а если его нет — PNR, набор продуктов и идентификаторы
- *       платёжных транзакций а/к (при их отсутствии — дата и время оплаты);</li>
+ *   <li>ключ — обязательный заголовок {@code Idempotency-Key};</li>
  *   <li>повтор с тем же ключом не создаёт дублей: возвращается результат первичного выпуска;</li>
- *   <li>после частичного отказа повтор довыпускает только недостающие полисы;</li>
- *   <li>активная заявка на ту же бронь и продукты без явного ключа — ошибка {@code duplicate} (ТЗ п. 7.6.5).</li>
+ *   <li>после частичного отказа повтор довыпускает только недостающие полисы.</li>
  * </ul>
  */
 @Slf4j
 @Service
 @RequiredArgsConstructor
 public class IdempotencyService {
-
-    private static final EnumSet<IdempotencyStatus> LIVE_STATUSES =
-            EnumSet.of(IdempotencyStatus.IN_PROGRESS, IdempotencyStatus.PARTIAL, IdempotencyStatus.COMPLETED);
 
     private final InsCentrumAirIdempotencyRepository idempotencyRepository;
     private final InsCentrumAirIdempotencyPolicyRepository issuedPolicyRepository;
@@ -61,18 +53,13 @@ public class IdempotencyService {
      */
     @Transactional(propagation = Propagation.REQUIRES_NEW)
     public IdempotencyRecord begin(PolicyIssueRequest request, String headerKey) {
-        ProductSelection products = ProductSelection.of(request.products());
-        String fingerprint = products.fingerprint();
-        String key = resolveKey(request, headerKey, fingerprint);
+        String key = requireKey(headerKey);
+        String fingerprint = ProductSelection.of(request.products()).fingerprint();
         String requestHash = hash(serialize(request));
 
         Optional<InsCentrumAirIdempotencyEntity> existing = idempotencyRepository.findByIdempotencyKey(key);
         if (existing.isPresent()) {
             return resume(existing.get(), requestHash);
-        }
-
-        if (isBlank(headerKey)) {
-            requireNoActiveDuplicate(request.pnr(), fingerprint);
         }
 
         try {
@@ -148,14 +135,6 @@ public class IdempotencyService {
         return new IdempotencyRecord(entity.getId(), entity.getIdempotencyKey(), null, entity.getBookingId(), issued);
     }
 
-    private void requireNoActiveDuplicate(String pnr, String fingerprint) {
-        if (idempotencyRepository.existsByPnrAndProductFingerprintAndStatusIn(pnr, fingerprint, LIVE_STATUSES)) {
-            throw new CentrumAirApiException(CentrumAirErrorCode.DUPLICATE,
-                    "Active policies already exist for PNR " + pnr + " and the same products; "
-                            + "send an explicit Idempotency-Key header to issue them again");
-        }
-    }
-
     private Map<Integer, IdempotencyRecord.IssuedGroup> issuedGroups(Long recordId) {
         List<InsCentrumAirIdempotencyPolicyEntity> rows =
                 issuedPolicyRepository.findByIdempotencyIdOrderByPolicyGroup(recordId);
@@ -171,31 +150,16 @@ public class IdempotencyService {
         return OffsetDateTime.now().isBefore(deadline);
     }
 
-    private String resolveKey(PolicyIssueRequest request, String headerKey, String fingerprint) {
-        if (!isBlank(headerKey)) {
-            String key = headerKey.trim();
-            if (key.length() > 255) {
-                throw CentrumAirApiException.validation("Idempotency-Key must not exceed 255 characters");
-            }
-            return key;
+    /** Заголовок обязателен: он и есть обещание клиента «это тот же самый запрос». */
+    private static String requireKey(String headerKey) {
+        if (headerKey == null || headerKey.isBlank()) {
+            throw CentrumAirApiException.validation("Idempotency-Key header is required");
         }
-        return hash(String.join("|", request.pnr(), fingerprint, paymentReference(request)));
-    }
-
-    /**
-     * Отпечаток попытки оплаты. Идентификаторы транзакций а/к уникальны для платежа: повтор того же
-     * запроса даёт тот же ключ, новая оплата той же брони — новый. Если транзакции не переданы,
-     * роль отпечатка играет дата и время оплаты.
-     */
-    private static String paymentReference(PolicyIssueRequest request) {
-        if (request.transactions() == null || request.transactions().isEmpty()) {
-            return String.valueOf(request.paymentTime());
+        String key = headerKey.trim();
+        if (key.length() > 255) {
+            throw CentrumAirApiException.validation("Idempotency-Key must not exceed 255 characters");
         }
-        return request.transactions().stream()
-                .map(TransactionDto::transactionId)
-                .filter(id -> id != null && !id.isBlank())
-                .sorted()
-                .collect(Collectors.joining(","));
+        return key;
     }
 
     private String serialize(Object value) {
@@ -230,7 +194,4 @@ public class IdempotencyService {
         return message.length() <= 1000 ? message : message.substring(0, 1000);
     }
 
-    private static boolean isBlank(String value) {
-        return value == null || value.isBlank();
-    }
 }

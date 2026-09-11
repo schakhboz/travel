@@ -66,19 +66,41 @@ class IdempotencyServiceTest {
     @Test
     void firstRequestStartsNewIssue() {
         when(idempotencyRepository.findByIdempotencyKey(anyString())).thenReturn(Optional.empty());
-        when(idempotencyRepository.existsByPnrAndProductFingerprintAndStatusIn(anyString(), anyString(), any()))
-                .thenReturn(false);
         when(idempotencyRepository.saveAndFlush(any())).thenAnswer(invocation -> {
             InsCentrumAirIdempotencyEntity entity = invocation.getArgument(0);
             entity.setId(1L);
             return entity;
         });
 
-        IdempotencyRecord record = service.begin(request, null);
+        IdempotencyRecord record = service.begin(request, "key-1");
 
         assertFalse(record.isReplay());
         assertEquals(1L, record.id());
+        assertEquals("key-1", record.key());
         assertTrue(record.issuedGroups().isEmpty());
+    }
+
+    @Test
+    void requestWithoutIdempotencyKeyIsRejected() {
+        CentrumAirApiException error = assertThrows(CentrumAirApiException.class,
+                () -> service.begin(request, null));
+
+        assertEquals(CentrumAirErrorCode.VALIDATION_ERROR, error.getErrorCode());
+        assertEquals("Idempotency-Key header is required", error.getMessage());
+        verifyNoInteractions(idempotencyRepository);
+    }
+
+    @Test
+    void blankIdempotencyKeyIsRejected() {
+        assertThrows(CentrumAirApiException.class, () -> service.begin(request, "   "));
+    }
+
+    @Test
+    void tooLongIdempotencyKeyIsRejected() {
+        CentrumAirApiException error = assertThrows(CentrumAirApiException.class,
+                () -> service.begin(request, "k".repeat(256)));
+
+        assertEquals("Idempotency-Key must not exceed 255 characters", error.getMessage());
     }
 
     @Test
@@ -133,57 +155,6 @@ class IdempotencyServiceTest {
         CentrumAirApiException error = assertThrows(CentrumAirApiException.class,
                 () -> service.begin(request, "key-1"));
         assertEquals(CentrumAirErrorCode.ISSUE_IN_PROGRESS, error.getErrorCode());
-    }
-
-    @Test
-    void secondPaymentAttemptWithoutHeaderKeyIsDuplicate() {
-        when(idempotencyRepository.findByIdempotencyKey(anyString())).thenReturn(Optional.empty());
-        when(idempotencyRepository.existsByPnrAndProductFingerprintAndStatusIn(anyString(), anyString(), any()))
-                .thenReturn(true);
-
-        CentrumAirApiException error = assertThrows(CentrumAirApiException.class,
-                () -> service.begin(request, null));
-        assertEquals(CentrumAirErrorCode.DUPLICATE, error.getErrorCode());
-    }
-
-    @Test
-    void derivedKeyChangesWithPaymentTransaction() {
-        when(idempotencyRepository.findByIdempotencyKey(anyString())).thenReturn(Optional.empty());
-        when(idempotencyRepository.saveAndFlush(any())).thenAnswer(invocation -> invocation.getArgument(0));
-
-        service.begin(request, null);
-        String firstAttemptKey = capturedKey();
-
-        clearInvocations(idempotencyRepository);
-        when(idempotencyRepository.findByIdempotencyKey(anyString())).thenReturn(Optional.empty());
-        when(idempotencyRepository.saveAndFlush(any())).thenAnswer(invocation -> invocation.getArgument(0));
-        service.begin(PolicyRequests.issueRequest("PNR123", PRODUCTS, "tx-2"), null);
-
-        assertNotEquals(firstAttemptKey, capturedKey(),
-                "новая оплата той же брони приходит с другим transactionId и получает свой ключ");
-    }
-
-    @Test
-    void repeatOfTheSamePaymentKeepsTheSameKey() {
-        when(idempotencyRepository.findByIdempotencyKey(anyString())).thenReturn(Optional.empty());
-        when(idempotencyRepository.saveAndFlush(any())).thenAnswer(invocation -> invocation.getArgument(0));
-
-        service.begin(request, null);
-        String firstKey = capturedKey();
-
-        clearInvocations(idempotencyRepository);
-        when(idempotencyRepository.findByIdempotencyKey(anyString())).thenReturn(Optional.empty());
-        when(idempotencyRepository.saveAndFlush(any())).thenAnswer(invocation -> invocation.getArgument(0));
-        service.begin(PolicyRequests.issueRequest("PNR123", PRODUCTS, "tx-1"), null);
-
-        assertEquals(firstKey, capturedKey());
-    }
-
-    private String capturedKey() {
-        org.mockito.ArgumentCaptor<InsCentrumAirIdempotencyEntity> captor =
-                org.mockito.ArgumentCaptor.forClass(InsCentrumAirIdempotencyEntity.class);
-        verify(idempotencyRepository).saveAndFlush(captor.capture());
-        return captor.getValue().getIdempotencyKey();
     }
 
     private InsCentrumAirIdempotencyEntity existing(IdempotencyStatus status) {
