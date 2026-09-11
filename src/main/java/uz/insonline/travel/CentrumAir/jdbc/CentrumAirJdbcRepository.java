@@ -204,12 +204,14 @@ public class CentrumAirJdbcRepository {
         jdbcTemplate.update("UPDATE INS_POLIS SET ERSP_STATUS = 0, ERSP_REASON = ? WHERE TB_ID = ?", reason, policyId);
     }
 
+    /** Реквизиты полиса читаются после регистрации в НАПП: серия, uuid и рег. номер приходят оттуда. */
     public IssuedPolicyRow findIssuedPolicy(Long policyId) {
         return jdbcTemplate.queryForObject(
-                "SELECT TB_SERY, TB_NUMBER, TB_PREMIA, TB_SUMMA FROM INS_POLIS WHERE TB_ID = ?",
+                "SELECT TB_SERY, TB_NUMBER, FOND_UID, TB_PREMIA, TB_SUMMA FROM INS_POLIS WHERE TB_ID = ?",
                 (rs, rowNum) -> new IssuedPolicyRow(
                         rs.getString("TB_SERY"),
                         rs.getLong("TB_NUMBER"),
+                        rs.getString("FOND_UID"),
                         rs.getBigDecimal("TB_PREMIA"),
                         rs.getBigDecimal("TB_SUMMA")
                 ),

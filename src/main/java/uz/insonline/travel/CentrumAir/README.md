@@ -42,6 +42,13 @@
 Таблицы создаются скриптом `src/main/resources/db/centrum_air_idempotency.sql` (Oracle 11g;
 `ddl-auto: validate` — DDL приложением не создаётся).
 
+## Реквизиты полиса от НАПП
+
+Серию, uuid и регистрационный номер присваивает НАПП: пакет `ERSP_VOLUNTARY_INTEGRATIONS`
+после успешной регистрации пишет их в `INS_POLIS` (`TB_SERY`, `FOND_UID`, `FOND_REGISTER_NUMBER`).
+Поэтому реквизиты в ответе читаются из таблицы уже после вызова НАПП: `policyUuid` — это `FOND_UID`,
+а не наш номер полиса. Если регистрация не прошла, `FOND_UID` пуст и `policyUuid` возвращается `null`.
+
 ## Сверка премии (ТЗ п. 7.6.4)
 
 `POST /policy/issue` пересчитывает премию брони по тарифной матрице и сравнивает с

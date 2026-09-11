@@ -100,7 +100,7 @@ public class CentrumInsuranceService {
                 .policyId(issued.policyId())
                 .policySeries(policy.series())
                 .policyNumber(policy.number())
-                .policyUuid(String.valueOf(policy.number()))
+                .policyUuid(policy.uuid())
                 .premiumAmount(policy.premiumAmount())
                 .liabilityAmount(policy.liabilityAmount())
                 .riskCodes(String.join(",", RiskCatalog.risksForGroup(policyGroup, products)))
